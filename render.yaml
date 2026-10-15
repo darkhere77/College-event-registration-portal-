@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: campus-assembly
+    env: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: NODE_ENV=production npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
