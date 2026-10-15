@@ -147,6 +147,15 @@ export function applyTheme(colors: ThemeColors) {
 }
 
 /**
+ * Loads the saved palette and applies it immediately during app startup.
+ */
+export function initializeTheme(): ThemeColors {
+  const theme = loadSavedTheme();
+  applyTheme(theme);
+  return theme;
+}
+
+/**
  * Saves customized theme to localStorage.
  */
 export function saveTheme(colors: ThemeColors) {

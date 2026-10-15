@@ -7,7 +7,7 @@
     --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
-  body {
+  body, #root {
     font-family: var(--font-body);
     background-color: var(--portal-bg, #050710);
     color: var(--portal-text, #e2e8f0);
@@ -51,6 +51,45 @@
 /* =========================================================================
    POWER MANIFESTATION ELEMENTAL KEYFRAMES & HOVER SURGES
    ========================================================================= */
+
+@keyframes heroFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.hero-interaction-card {
+  animation: heroFloat 3.5s ease-in-out infinite;
+}
+
+.hero-interaction-card {
+  animation: heroFloat 3.5s ease-in-out infinite, heroRoleEntrance 0.8s ease-out;
+}
+
+.hero-speech {
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+@keyframes heroRoleEntrance {
+  0% {
+    transform: scale(0.94) translateY(10px);
+    opacity: 0.2;
+    filter: blur(4px);
+  }
+  55% {
+    transform: scale(1.03) translateY(-2px);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
 
 @keyframes electricSurgePulse {
   0% {

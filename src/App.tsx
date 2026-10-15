@@ -17,6 +17,7 @@ import { ColorCustomizerDrawer } from './components/ColorCustomizerDrawer';
 import { HeroPowerEffectOverlay, HeroPowerType } from './components/HeroPowerEffectOverlay';
 import { auth, testConnection } from './lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { initializeTheme } from './utils/themeManager';
 
 export default function App() {
   const [config, setConfig] = useState<EventConfig>(INITIAL_EVENT_CONFIG);
@@ -56,6 +57,10 @@ export default function App() {
       createdAt: new Date().toISOString(),
     },
   ]);
+
+  useEffect(() => {
+    initializeTheme();
+  }, []);
 
   // Test Firebase connection and listen for Auth state
   useEffect(() => {
@@ -133,7 +138,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050710] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div
+      className="min-h-screen flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200"
+      style={{ backgroundColor: 'var(--portal-bg, #050710)', color: 'var(--portal-text, #f1f5f9)' }}
+    >
       {/* Real-time Announcements Ticker Bar */}
       <AnnouncementsTicker announcements={announcements} />
 

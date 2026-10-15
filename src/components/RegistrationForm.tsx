@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { EventMission, SquadRoleConfig } from '../config/eventConfig';
 import {
   validateRegistration,
@@ -86,8 +86,84 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [typedMessage, setTypedMessage] = useState('');
+  const [roleAnnouncement, setRoleAnnouncement] = useState<string | null>(null);
+  const [heroPulseKey, setHeroPulseKey] = useState<number>(0);
 
   const activeMission = missions.find(m => m.id === selectedMissionId) || missions[0];
+  const activeHero = HERO_CHARACTERS[selectedRole] || HERO_CHARACTERS.Engineer;
+  const registrationProgress = useMemo(() => {
+    const checks = [
+      formData.fullName.trim(),
+      formData.collegeEmail.trim(),
+      formData.studentId.trim(),
+      formData.department.trim(),
+      activeMission.name,
+      selectedRole,
+      formData.rulesAgreed,
+    ];
+    const completeCount = checks.filter(Boolean).length;
+    return Math.min(100, Math.round((completeCount / checks.length) * 100));
+  }, [activeMission.name, formData.collegeEmail, formData.department, formData.fullName, formData.rulesAgreed, formData.studentId, selectedRole]);
+
+  const assistantStatus = currentStep === 1
+    ? formData.fullName.trim()
+      ? 'Identity match established'
+      : 'Scanning credentials'
+    : currentStep === 2
+      ? 'Mission sync active'
+      : formData.rulesAgreed
+        ? 'Clearance granted'
+        : 'Awaiting final authorization';
+
+  const heroMessage = (() => {
+    if (roleAnnouncement && currentStep === 2) {
+      return roleAnnouncement;
+    }
+
+    if (currentStep === 1) {
+      if (formData.fullName.trim()) {
+        return `${formData.fullName.split(' ')[0]}, your mission profile is being prepared. Let’s lock in your campus credentials before the portal opens.`;
+      }
+      return `Welcome, recruit. I’m ${activeHero.name}. Tell me your name and campus identity so I can verify your access to the event.`;
+    }
+
+    if (currentStep === 2) {
+      if (activeMission) {
+        return `${activeHero.heroAlias} here: ${activeMission.name} is a perfect match for your ${selectedRole.toLowerCase()} profile. Choose the squad that fits your strengths.`;
+      }
+      return `${activeHero.heroAlias} is scanning the field. Select the mission lane that best suits your tactical profile.`;
+    }
+
+    if (formData.rulesAgreed) {
+      return `Protocol confirmed. ${activeHero.name} has synced your registration packet and is ready to finalize your event access badge.`;
+    }
+
+    return `${activeHero.heroAlias} is standing by. Review the final mission summary and confirm the code of conduct before I issue your clearance.`;
+  })();
+
+  useEffect(() => {
+    setTypedMessage('');
+    if (!heroMessage) return;
+
+    let index = 0;
+    const interval = setInterval(() => {
+      index += 1;
+      setTypedMessage(heroMessage.slice(0, index));
+      if (index >= heroMessage.length) {
+        clearInterval(interval);
+      }
+    }, 18);
+
+    return () => clearInterval(interval);
+  }, [heroMessage]);
+
+  const handleRoleSelect = (role: 'Strategist' | 'Engineer' | 'Creator' | 'Field Agent') => {
+    const hero = HERO_CHARACTERS[role];
+    setRoleAnnouncement(`${hero.heroAlias} detected ${selectedRole === role ? 'your current alignment' : 'your chosen power profile'}. ${hero.powerTitle} is primed for this mission. We are ready to assign your squad.`);
+    setHeroPulseKey(prev => prev + 1);
+    onRoleChange(role);
+  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -270,6 +346,103 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             {currentStep === 2 && 'Mission & Squad Assignment'}
             {currentStep === 3 && 'Verification & Security Oath'}
           </p>
+        </div>
+
+        <div className="mb-8 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] items-center">
+          <div
+            key={heroPulseKey}
+            className="hero-interaction-card relative rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 shadow-2xl shadow-cyan-950/20"
+            style={{ boxShadow: `0 0 30px ${activeHero.accentColor}25` }}
+          >
+            <div
+              className="absolute inset-3 rounded-2xl opacity-80"
+              style={{
+                background: `radial-gradient(circle, ${activeHero.primaryColor}22 0%, transparent 60%)`,
+                filter: 'blur(20px)',
+              }}
+            />
+            <div className="relative overflow-hidden rounded-2xl border border-white/10">
+              <img
+                src={activeHero.image}
+                alt={activeHero.name}
+                className="h-52 w-full object-cover object-center grayscale-[10%]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+              <div
+                className="absolute bottom-2 left-2 right-2 rounded-full border px-2 py-1 text-center text-[10px] font-mono-tech font-bold uppercase tracking-[0.2em]"
+                style={{
+                  borderColor: `${activeHero.accentColor}80`,
+                  backgroundColor: `${activeHero.primaryColor}20`,
+                  color: activeHero.accentColor,
+                }}
+              >
+                {selectedRole}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5 shadow-lg">
+            <div
+              className="absolute -left-2 top-6 h-4 w-4 rotate-45 border-l border-b border-slate-800 bg-slate-900/80 hidden sm:block"
+            />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4" style={{ color: activeHero.primaryColor }} />
+                <p className="text-[10px] font-mono-tech uppercase tracking-[0.25em] text-slate-400">
+                  Guardian patron
+                </p>
+              </div>
+              <span
+                className="rounded-full border px-2 py-0.5 text-[9px] font-mono-tech uppercase tracking-[0.2em]"
+                style={{
+                  borderColor: `${activeHero.primaryColor}55`,
+                  color: activeHero.accentColor,
+                  backgroundColor: `${activeHero.primaryColor}10`,
+                }}
+              >
+                {assistantStatus}
+              </span>
+            </div>
+            <h3 className="text-xl font-display font-bold text-white">{activeHero.name}</h3>
+            <p className="text-xs font-mono-tech uppercase tracking-[0.22em] text-slate-400 mb-3">
+              {activeHero.heroAlias}
+            </p>
+            <div
+              className="hero-speech rounded-2xl border p-3 text-sm leading-relaxed text-slate-200"
+              style={{
+                borderColor: `${activeHero.primaryColor}55`,
+                background: `linear-gradient(135deg, ${activeHero.primaryColor}18, rgba(15, 23, 42, 0.9))`,
+              }}
+            >
+              “{typedMessage}
+              <span className="inline-block w-2 h-4 ml-1 align-middle rounded-sm bg-white/80 animate-pulse"> </span>”
+            </div>
+
+            <div className="mt-3">
+              <div className="mb-1 flex items-center justify-between text-[10px] font-mono-tech uppercase tracking-[0.2em] text-slate-400">
+                <span>Mission readiness</span>
+                <span>{registrationProgress}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-950">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${registrationProgress}%`,
+                    background: `linear-gradient(90deg, ${activeHero.primaryColor}, ${activeHero.accentColor})`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-mono-tech text-slate-300">
+                {activeMission.name}
+              </span>
+              <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-mono-tech text-slate-300">
+                {activeHero.powerTitle}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Accessible Step Progress Indicator */}
@@ -539,7 +712,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                       <button
                         type="button"
                         key={r.id}
-                        onClick={() => onRoleChange(r.id)}
+                        onClick={() => handleRoleSelect(r.id)}
                         className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-between ${
                           selectedRole === r.id
                             ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold shadow-md ring-1 ring-cyan-500/50'
