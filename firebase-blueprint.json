@@ -1,0 +1,248 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Recruit registration for campus assembly missions and event categories.",
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "description": "Full legal or campus name of the recruit.",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "collegeEmail": {
+          "type": "string",
+          "description": "Official college or institutional email address.",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number for mission alerts.",
+          "minLength": 7,
+          "maxLength": 25
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Campus student enrollment ID.",
+          "minLength": 2,
+          "maxLength": 50
+        },
+        "department": {
+          "type": "string",
+          "description": "Academic department or discipline.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "yearOfStudy": {
+          "type": "string",
+          "description": "Academic year of study.",
+          "enum": ["1st Year", "2nd Year", "3rd Year", "4th Year", "Postgraduate", "Faculty/Staff"]
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Selected event mission identifier.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "eventName": {
+          "type": "string",
+          "description": "Title of the selected event.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "squadRole": {
+          "type": "string",
+          "description": "Personalized squad tactical role.",
+          "enum": ["Strategist", "Engineer", "Creator", "Field Agent"]
+        },
+        "teamName": {
+          "type": "string",
+          "description": "Optional team or strike squad name.",
+          "maxLength": 100
+        },
+        "teammates": {
+          "type": "string",
+          "description": "Names and emails of optional squad members.",
+          "maxLength": 500
+        },
+        "dietaryOrAccess": {
+          "type": "string",
+          "description": "Optional accessibility or dietary requirements.",
+          "maxLength": 300
+        },
+        "confirmationCode": {
+          "type": "string",
+          "description": "Unique cryptographic recruitment dispatch code.",
+          "minLength": 6,
+          "maxLength": 30
+        },
+        "status": {
+          "type": "string",
+          "description": "Registration lifecycle status.",
+          "enum": ["CONFIRMED", "WAITLISTED", "CHECKED_IN", "CANCELLED"]
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth user ID if signed in.",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp."
+        }
+      },
+      "required": [
+        "fullName",
+        "collegeEmail",
+        "studentId",
+        "department",
+        "yearOfStudy",
+        "eventId",
+        "eventName",
+        "squadRole",
+        "confirmationCode",
+        "status"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated student recruit profile with privacy control.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique identifier of the recruit.",
+          "maxLength": 128
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Student full name.",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "collegeEmail": {
+          "type": "string",
+          "description": "Verified campus email.",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Campus ID.",
+          "minLength": 2,
+          "maxLength": 50
+        },
+        "department": {
+          "type": "string",
+          "description": "Academic major.",
+          "maxLength": 80
+        },
+        "yearOfStudy": {
+          "type": "string",
+          "description": "Year of study.",
+          "enum": ["1st Year", "2nd Year", "3rd Year", "4th Year", "Postgraduate", "Faculty/Staff"]
+        },
+        "preferredRole": {
+          "type": "string",
+          "description": "Preferred squad tactical role.",
+          "enum": ["Strategist", "Engineer", "Creator", "Field Agent"]
+        },
+        "dietaryOrAccess": {
+          "type": "string",
+          "description": "Dietary or access accommodations.",
+          "maxLength": 300
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last profile update."
+        }
+      },
+      "required": ["userId", "fullName", "collegeEmail", "studentId", "department", "yearOfStudy"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Broadcast alerts and logistical directives published by organizers.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Headline of the broadcast.",
+          "minLength": 2,
+          "maxLength": 150
+        },
+        "content": {
+          "type": "string",
+          "description": "Full body text of the alert.",
+          "minLength": 5,
+          "maxLength": 1000
+        },
+        "priority": {
+          "type": "string",
+          "description": "Urgency tier.",
+          "enum": ["NORMAL", "URGENT", "EMERGENCY"]
+        },
+        "channel": {
+          "type": "string",
+          "description": "Target mission category or campus wide.",
+          "maxLength": 60
+        },
+        "author": {
+          "type": "string",
+          "description": "Authorized organizer caller.",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Broadcast timestamp."
+        }
+      },
+      "required": ["title", "content", "priority", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized campus assembly officer or event coordinator.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin email address.",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "Access tier.",
+          "enum": ["SUPER_ADMIN", "COORDINATOR", "VERIFIER"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Admin registration timestamp."
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Recruit registration documents with personal information and mission assignments."
+    },
+    "/users/{userId}/profile/main": {
+      "schema": "UserProfile",
+      "description": "Personal recruit profile with student credentials and preferences."
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Official campus assembly broadcast alerts."
+    },
+    "/admins/{userId}": {
+      "schema": "Admin",
+      "description": "Authorized organizer and verification staff profiles."
+    }
+  }
+}

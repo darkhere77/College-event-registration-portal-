@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-orbitron: 'Orbitron', monospace, sans-serif;
+    --font-space: 'Space Grotesk', sans-serif;
+    --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--portal-bg, #050710);
+    color: var(--portal-text, #e2e8f0);
+    overflow-x: hidden;
+  }
+}
+
+.font-display {
+  font-family: var(--font-orbitron);
+  letter-spacing: 0.05em;
+}
+
+.font-mono-tech {
+  font-family: var(--font-space);
+}
+
+/* Custom subtle cosmic starfield and grid lines without performance drops */
+.cosmic-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #080c18;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* =========================================================================
+   POWER MANIFESTATION ELEMENTAL KEYFRAMES & HOVER SURGES
+   ========================================================================= */
+
+@keyframes electricSurgePulse {
+  0% {
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.6);
+  }
+  25% {
+    box-shadow: 0 0 24px rgba(6, 182, 212, 0.7), inset 0 0 20px rgba(6, 182, 212, 0.25);
+    border-color: rgba(103, 232, 249, 1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.4), inset 0 0 10px rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.7);
+  }
+  75% {
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.8), inset 0 0 25px rgba(34, 211, 238, 0.3);
+    border-color: rgba(165, 243, 252, 1);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.6);
+  }
+}
+
+@keyframes kineticWaveRipple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
+    border-color: rgba(192, 132, 252, 0.9);
+  }
+  50% {
+    box-shadow: 0 0 22px 6px rgba(168, 85, 247, 0.4);
+    border-color: rgba(232, 121, 249, 1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+    border-color: rgba(192, 132, 252, 0.9);
+  }
+}
+
+@keyframes mysticMandalaAura {
+  0% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.35), inset 0 0 12px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(251, 191, 36, 0.7), inset 0 0 22px rgba(251, 191, 36, 0.3);
+    border-color: rgba(253, 230, 138, 1);
+  }
+  100% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.35), inset 0 0 12px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.7);
+  }
+}
+
+@keyframes chaosHexDistort {
+  0% {
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.4), inset 0 0 14px rgba(192, 132, 252, 0.2);
+    border-color: rgba(244, 63, 94, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(225, 29, 72, 0.75), inset 0 0 24px rgba(244, 63, 94, 0.35);
+    border-color: rgba(251, 113, 133, 1);
+  }
+  100% {
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.4), inset 0 0 14px rgba(192, 132, 252, 0.2);
+    border-color: rgba(244, 63, 94, 0.8);
+  }
+}
+
+@keyframes lightningSweep {
+  0% {
+    transform: translateX(-150%) skewX(-30deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(250%) skewX(-30deg);
+    opacity: 0;
+  }
+}
+
+/* Card Hover Manifestation Classes */
+.card-manifest-electric {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+.card-manifest-electric:hover {
+  animation: electricSurgePulse 1.2s infinite ease-in-out;
+  transform: translateY(-4px) scale(1.01);
+}
+.card-manifest-electric:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(103, 232, 249, 0.25),
+    rgba(255, 255, 255, 0.5),
+    rgba(56, 189, 248, 0.25),
+    transparent
+  );
+  pointer-events: none;
+  animation: lightningSweep 1.1s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-manifest-kinetic {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+.card-manifest-kinetic:hover {
+  animation: kineticWaveRipple 1.4s infinite ease-out;
+  transform: translateY(-4px) scale(1.01);
+}
+.card-manifest-kinetic:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(192, 132, 252, 0.3),
+    rgba(255, 255, 255, 0.45),
+    rgba(168, 85, 247, 0.3),
+    transparent
+  );
+  pointer-events: none;
+  animation: lightningSweep 1.3s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-manifest-mystic {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+.card-manifest-mystic:hover {
+  animation: mysticMandalaAura 1.4s infinite ease-in-out;
+  transform: translateY(-4px) scale(1.01);
+}
+.card-manifest-mystic:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(245, 158, 11, 0.3),
+    rgba(254, 240, 138, 0.5),
+    rgba(251, 191, 36, 0.3),
+    transparent
+  );
+  pointer-events: none;
+  animation: lightningSweep 1.2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-manifest-hex {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+.card-manifest-hex:hover {
+  animation: chaosHexDistort 1.3s infinite ease-in-out;
+  transform: translateY(-4px) scale(1.01);
+}
+.card-manifest-hex:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(244, 63, 94, 0.3),
+    rgba(253, 164, 175, 0.5),
+    rgba(192, 132, 252, 0.3),
+    transparent
+  );
+  pointer-events: none;
+  animation: lightningSweep 1.2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}

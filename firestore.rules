@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == 'narenvenkaatbackup@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll([
+        'fullName', 'collegeEmail', 'studentId', 'department', 
+        'yearOfStudy', 'eventId', 'eventName', 'squadRole', 
+        'confirmationCode', 'status'
+      ]) &&
+      data.keys().hasOnly([
+        'fullName', 'collegeEmail', 'phone', 'studentId', 'department', 
+        'yearOfStudy', 'eventId', 'eventName', 'squadRole', 'teamName', 
+        'teammates', 'dietaryOrAccess', 'confirmationCode', 'status', 
+        'userId', 'createdAt', 'updatedAt'
+      ]) &&
+      data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+      data.collegeEmail is string && data.collegeEmail.size() >= 5 && data.collegeEmail.size() <= 120 &&
+      data.studentId is string && data.studentId.size() >= 2 && data.studentId.size() <= 50 &&
+      data.department is string && data.department.size() >= 2 && data.department.size() <= 80 &&
+      data.yearOfStudy in ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate', 'Faculty/Staff'] &&
+      data.eventId is string && data.eventId.size() >= 2 && data.eventId.size() <= 80 &&
+      data.eventName is string && data.eventName.size() >= 2 && data.eventName.size() <= 120 &&
+      data.squadRole in ['Strategist', 'Engineer', 'Creator', 'Field Agent'] &&
+      data.confirmationCode is string && data.confirmationCode.size() >= 6 && data.confirmationCode.size() <= 30 &&
+      data.status in ['CONFIRMED', 'WAITLISTED', 'CHECKED_IN', 'CANCELLED'] &&
+      (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
+      (!('teamName' in data) || (data.teamName is string && data.teamName.size() <= 100)) &&
+      (!('teammates' in data) || (data.teammates is string && data.teammates.size() <= 500)) &&
+      (!('dietaryOrAccess' in data) || (data.dietaryOrAccess is string && data.dietaryOrAccess.size() <= 300)) &&
+      (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['title', 'content', 'priority', 'createdAt']) &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 150 &&
+      data.content is string && data.content.size() >= 5 && data.content.size() <= 1000 &&
+      data.priority in ['NORMAL', 'URGENT', 'EMERGENCY'] &&
+      data.createdAt is string &&
+      (!('channel' in data) || (data.channel is string && data.channel.size() <= 60)) &&
+      (!('author' in data) || (data.author is string && data.author.size() <= 100));
+    }
+
+    // Registrations collection
+    match /registrations/{registrationId} {
+      allow create: if isValidId(registrationId) && isValidRegistration(incoming()) && (
+        !isSignedIn() || incoming().userId == request.auth.uid
+      );
+
+      allow get: if isValidId(registrationId) && (
+        isAdmin() || 
+        (isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.collegeEmail == request.auth.token.email))
+      );
+
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow update: if isValidId(registrationId) && isValidRegistration(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['dietaryOrAccess', 'teamName', 'teammates', 'updatedAt']))
+      );
+
+      allow delete: if isValidId(registrationId) && isAdmin();
+    }
+
+    // User Profile subcollections for privacy protection
+    match /users/{userId}/profile/{docId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Announcements collection
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(announcementId) && isValidAnnouncement(incoming());
+      allow delete: if isAdmin() && isValidId(announcementId);
+    }
+
+    // Admins collection
+    match /admins/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}

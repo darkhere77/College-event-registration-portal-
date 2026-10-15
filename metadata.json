@@ -1,0 +1,6 @@
+{
+  "name": "Avengers: Doomsday — Campus Assembly",
+  "description": "An immersive fan-event college assembly portal, tactical mission explorer, role selector, and verified recruit registration system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
