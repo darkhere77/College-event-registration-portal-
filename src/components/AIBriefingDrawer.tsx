@@ -17,6 +17,48 @@ interface AIBriefingDrawerProps {
   onSelectRole?: (role: 'Strategist' | 'Engineer' | 'Creator' | 'Field Agent') => void;
 }
 
+const IRON_MAN_PERSONA = {
+  name: 'Iron Man',
+  title: 'Tony Stark',
+  tagline: 'Armor systems online • Mission intel active',
+};
+
+const briefingBackdropImage = "linear-gradient(135deg, rgba(5,10,22,0.86), rgba(19,22,40,0.74)), url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1600 1200%22%3E%3Cdefs%3E%3ClinearGradient id=%22bg%22 x1=%220%22 x2=%221%22 y1=%220%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%230b1224%22/%3E%3Cstop offset=%2248%25%22 stop-color=%22%23131e3c%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%230d0d18%22/%3E%3C/linearGradient%3E%3ClinearGradient id=%22flare%22 x1=%220%22 x2=%221%22 y1=%220%22 y2=%220%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23fbbf24%22/%3E%3Cstop offset=%2245%25%22 stop-color=%22%23f97316%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23ef4444%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill=%22url(%23bg)%22 width=%221600%22 height=%221200%22/%3E%3Ccircle cx=%221210%22 cy=%22240%22 r=%22280%22 fill=%22rgba(251,146,60,0.26)%22/%3E%3Ccircle cx=%22360%22 cy=%22240%22 r=%22300%22 fill=%22rgba(59,130,246,0.2)%22/%3E%3Cg opacity=%220.9%22%3E%3Cpath d=%22M900 100 L1320 260 L1150 1050 L780 1120 L560 760 Z%22 fill=%22url(%23flare)%22 opacity=%220.3%22/%3E%3Cpath d=%22M780 130 L1090 170 L950 980 L650 980 L520 510 Z%22 fill=%22rgba(15,23,42,0.72)%22/%3E%3C/g%3E%3Cg fill=%22rgba(255,255,255,0.45)%22%3E%3Ccircle cx=%22160%22 cy=%22180%22 r=%222.5%22/%3E%3Ccircle cx=%22260%22 cy=%22300%22 r=%223.5%22/%3E%3Ccircle cx=%22420%22 cy=%22140%22 r=%222.5%22/%3E%3Ccircle cx=%22610%22 cy=%22260%22 r=%222%22/%3E%3Ccircle cx=%22730%22 cy=%22190%22 r=%222.8%22/%3E%3Ccircle cx=%221070%22 cy=%22140%22 r=%222.8%22/%3E%3Ccircle cx=%221210%22 cy=%22320%22 r=%222.3%22/%3E%3Ccircle cx=%221380%22 cy=%22150%22 r=%222.5%22/%3E%3Ccircle cx=%221460%22 cy=%22320%22 r=%223%22/%3E%3Ccircle cx=%221235%22 cy=%22540%22 r=%222.4%22/%3E%3Ccircle cx=%221345%22 cy=%22760%22 r=%223%22/%3E%3Ccircle cx=%22180%22 cy=%22540%22 r=%222.2%22/%3E%3Ccircle cx=%22260%22 cy=%22700%22 r=%222.5%22/%3E%3C/g%3E%3Cg font-family=%22Arial, Helvetica, sans-serif%22 font-weight=%22800%22 letter-spacing=%2210%22 text-anchor=%22middle%22%3E%3Ctext x=%22800%22 y=%22670%22 fill=%22rgba(248,250,252,0.9)%22 font-size=%22124%22%3EAVENGERS%3C/text%3E%3Ctext x=%22800%22 y=%22800%22 fill=%22rgba(251,146,60,0.85)%22 font-size=%2296%22%3EDOOMSDAY%3C/text%3E%3C/g%3E%3C/svg%3E');";
+
+const IronManPortrait: React.FC = () => (
+  <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-orange-400/40 bg-gradient-to-br from-slate-950 via-[#160d0d] to-[#2d160f] shadow-lg shadow-orange-500/20">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.25),_transparent_55%)]" />
+    <svg viewBox="0 0 200 220" className="relative z-10 h-full w-full drop-shadow-[0_0_18px_rgba(251,146,60,0.35)]" aria-label="Iron Man portrait">
+      <defs>
+        <linearGradient id="armorRed" x1="0" x2="1">
+          <stop offset="0%" stopColor="#f87171" />
+          <stop offset="100%" stopColor="#dc2626" />
+        </linearGradient>
+        <linearGradient id="armorGold" x1="0" x2="1">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <path d="M55 60 L75 35 L125 35 L145 60 L160 160 L120 196 L80 196 L40 160 Z" fill="url(#armorRed)" opacity="0.96"/>
+      <path d="M78 70 L92 52 H108 L122 70 L130 150 H70 Z" fill="#dbeafe" opacity="0.9"/>
+      <path d="M88 70 H112 L118 104 H82 Z" fill="#94a3b8" opacity="0.8"/>
+      <path d="M85 83 L95 76 L105 76 L115 83 L115 108 H85 Z" fill="#111827" opacity="0.95"/>
+      <path d="M90 89 H110 L105 100 H95 Z" fill="#f8fafc" opacity="0.9"/>
+      <path d="M82 113 L118 113 L116 150 H84 Z" fill="#dc2626" opacity="0.85"/>
+      <path d="M75 141 L55 165 L86 170 L82 154 Z" fill="url(#armorGold)"/>
+      <path d="M125 141 L145 165 L114 170 L118 154 Z" fill="url(#armorGold)"/>
+      <path d="M90 120 H110 V130 H90 Z" fill="#facc15" opacity="0.9"/>
+      <circle cx="90" cy="96" r="5" fill="#f8fafc"/>
+      <circle cx="110" cy="96" r="5" fill="#f8fafc"/>
+      <path d="M83 92 L79 98" stroke="#0f172a" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M117 92 L121 98" stroke="#0f172a" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M92 110 Q100 117 108 110" stroke="#0f172a" strokeWidth="3" fill="none" strokeLinecap="round"/>
+      <path d="M48 150 L84 164" stroke="#fbbf24" strokeWidth="6" strokeLinecap="round"/>
+      <path d="M152 150 L116 164" stroke="#fbbf24" strokeWidth="6" strokeLinecap="round"/>
+    </svg>
+  </div>
+);
+
 export const AIBriefingDrawer: React.FC<AIBriefingDrawerProps> = ({
   isOpen,
   onClose,
@@ -28,8 +70,8 @@ export const AIBriefingDrawer: React.FC<AIBriefingDrawerProps> = ({
     {
       id: 'welcome',
       role: 'model',
-      text: `Greetings Recruit. I am the Campus Assembly Tactical AI Counselor. A level-4 multiverse disruption has been detected across the university quadrant. How may I assist your deployment? You can ask me about mission categories, which squad role suits your skills, event schedules, or preparation tips.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text: `Good news, recruit. I’m Iron Man, and the campus defense systems are fully online. We’ve got a multiverse-level event coming in hot, and I can break down the best missions, roles, timing, and prep fast. Ask me anything and I’ll keep it sharp and efficient.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' } ),
     },
   ]);
   const [input, setInput] = useState('');
@@ -112,21 +154,27 @@ export const AIBriefingDrawer: React.FC<AIBriefingDrawerProps> = ({
       aria-modal="true"
       aria-labelledby="briefing-title"
     >
-      <div className="w-full max-w-lg bg-[#070b1a] border-l border-slate-800 h-full flex flex-col shadow-2xl">
+      <div
+        className="w-full max-w-lg border-l border-slate-800 h-full flex flex-col shadow-2xl"
+        style={{
+          backgroundImage: briefingBackdropImage,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#0a0f24]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-              <Bot className="w-6 h-6" />
-            </div>
+            <IronManPortrait />
             <div>
               <h2 id="briefing-title" className="text-sm font-display font-bold text-white flex items-center gap-2">
-                <span>TACTICAL BRIEFING AI</span>
-                <span className="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/40">
+                <span>{IRON_MAN_PERSONA.name.toUpperCase()} AI</span>
+                <span className="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-400/40">
                   ONLINE
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 font-mono-tech">Campus Assembly Mission Command</p>
+              <p className="text-xs text-slate-400 font-mono-tech">{IRON_MAN_PERSONA.tagline}</p>
             </div>
           </div>
 
@@ -201,8 +249,10 @@ export const AIBriefingDrawer: React.FC<AIBriefingDrawerProps> = ({
                 }`}
               >
                 <div className="flex items-center justify-between mb-1 gap-4">
-                  <span className="font-mono-tech text-[10px] uppercase text-cyan-300 font-bold">
-                    {m.role === 'user' ? 'RECRUIT' : 'TACTICAL ADVISOR'}
+                  <span className={`font-mono-tech text-[10px] uppercase font-bold ${
+                    m.role === 'user' ? 'text-cyan-300' : 'text-orange-300'
+                  }`}>
+                    {m.role === 'user' ? 'RECRUIT' : `${IRON_MAN_PERSONA.name.toUpperCase()} MODE`}
                   </span>
                   <span className="text-[10px] text-slate-400">{m.timestamp}</span>
                 </div>
@@ -251,20 +301,23 @@ export const AIBriefingDrawer: React.FC<AIBriefingDrawerProps> = ({
 
 function generateLocalBriefingFallback(query: string, config: EventConfig): string {
   const q = query.toLowerCase();
+  if (q.includes('iron') || q.includes('tony') || q.includes('stark')) {
+    return `I’m Iron Man, and yes — the mission is already optimized. We do the smart play, the fast move, and the clean finish. Tell me what you need and I’ll turn it into a winning plan.`;
+  }
   if (q.includes('fee') || q.includes('cost') || q.includes('price')) {
-    return `Registration is 100% complimentary for all verified campus recruits! Student council sponsorship provides full credential passes, rations, and admission.`;
+    return `Registration is 100% complimentary for all verified campus recruits. That’s right — no charge, no nonsense, just full access and a serious mission briefing.`;
   }
   if (q.includes('role') || q.includes('strategist') || q.includes('engineer')) {
-    return `The 4 Squad Archetypes are:\n• Strategist: Coordinates timeline decisions & team logistics.\n• Engineer: Tech builders and code hackers.\n• Creator: UI/UX, generative art & sonic resonance.\n• Field Agent: Frontline esports, puzzle hunt & tactical operations.\nRoles are for fun and personalize your recruit pass!`;
+    return `The 4 Squad Archetypes are:\n• Strategist: Coordinates timeline decisions & team logistics.\n• Engineer: Tech builders and code hackers.\n• Creator: UI/UX, generative art & sonic resonance.\n• Field Agent: Frontline esports, puzzle hunt & tactical operations.\nPick the one that matches your strengths and I’ll make it work.`;
   }
   if (q.includes('code') || q.includes('hack') || q.includes('tech')) {
-    return `For technical recruits, the "Quantum Anomaly Hackathon" (24hr build sprint in Turing Lab) and the "AI Anomaly Defense Masterclass" are your highest priority missions!`;
+    return `For technical recruits, the "Quantum Anomaly Hackathon" and the "AI Anomaly Defense Masterclass" are the big plays. Build fast, think faster, and leave the competition in the dust.`;
   }
   if (q.includes('date') || q.includes('when') || q.includes('time')) {
-    return `The Campus Assembly takes place on ${config.eventDateDisplay}. Registration closes on ${config.registrationDeadlineDisplay}.`;
+    return `The Campus Assembly takes place on ${config.eventDateDisplay}. Registration closes on ${config.registrationDeadlineDisplay}. We’re on schedule — no panic, no delay.`;
   }
   if (q.includes('bring') || q.includes('laptop') || q.includes('id')) {
-    return `Recruits should bring their College ID, digital recruit pass (or code), and a laptop/charger if joining technical or design tracks.`;
+    return `Bring the College ID, your digital recruit pass, and a charged laptop if you’re joining a tech, design, or build-heavy mission. That’s the baseline gear.`;
   }
-  return `Understood, recruit. The multiverse anomaly requires every discipline: from AI engineers and tactical strategists to sonic creators and field agents. Select your preferred mission in the Directory and secure your spot on the Roster!`;
+  return `Understood, recruit. The multiverse anomaly needs every discipline: AI engineers, tactical strategists, designers, and field agents. Pick your mission, lock in your squad, and we’ll make this event look easy.`;
 }

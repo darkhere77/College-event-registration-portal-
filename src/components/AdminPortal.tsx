@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ConfirmedRegistration } from './RegistrationForm';
 import { EventConfig, EventMission } from '../config/eventConfig';
 import { db } from '../lib/firebase';
@@ -18,6 +18,8 @@ import {
   Users,
   Settings,
   X,
+  QrCode,
+  Camera,
   FileSpreadsheet,
   FileCode,
   Lock,
@@ -71,6 +73,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [filterRole, setFilterRole] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [maskSensitiveData, setMaskSensitiveData] = useState<boolean>(true); // Privacy-first default
+  const [scanToken, setScanToken] = useState<string>('');
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
+  const [isScanningCamera, setIsScanningCamera] = useState<boolean>(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Announcements state
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([
@@ -96,7 +103,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnPriority, setNewAnnPriority] = useState<'NORMAL' | 'URGENT' | 'EMERGENCY'>('NORMAL');
-  const [newAnnChannel, setNewAnnChannel] = useState('Campus Wide');
+  const [newAnnChannel, setNewAnnChannel] = useState('WhatsApp');
   const [isPublishingAnn, setIsPublishingAnn] = useState(false);
 
   // Editable config state
@@ -180,7 +187,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       title: newAnnTitle.trim(),
       content: newAnnContent.trim(),
       priority: newAnnPriority,
-      channel: newAnnChannel,
+      channel: newAnnChannel || 'WhatsApp',
       author: 'Organizer Command',
       createdAt: new Date().toISOString(),
     };
@@ -231,6 +238,144 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       } catch (e) {
         // Handled silently
       }
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsScanningCamera(false);
+  };
+
+  const processScanToken = async (rawToken: string) => {
+    const token = rawToken.trim();
+    if (!token) {
+      setScanMessage('Please scan a valid QR code or paste the pass payload first.');
+      return;
+    }
+
+    let parsedPayload: Record<string, string> | null = null;
+    try {
+      parsedPayload = JSON.parse(token) as Record<string, string>;
+    } catch (e) {
+      // raw token may be plain code text without JSON
+    }
+
+    const normalized = token.toUpperCase();
+    const candidate = roster.find(rec => {
+      const recValues = [
+        rec.confirmationCode,
+        rec.studentId,
+        rec.memberPassId,
+        rec.fullName,
+      ].filter(Boolean).map(v => v!.toUpperCase());
+      const payloadMatches = parsedPayload
+        ? [
+            parsedPayload.confirmationCode,
+            parsedPayload.studentId,
+            parsedPayload.memberPassId,
+            parsedPayload.fullName,
+          ].filter(Boolean).some(value => recValues.includes(String(value).toUpperCase()))
+        : false;
+
+      return recValues.includes(normalized) || payloadMatches;
+    });
+
+    if (!candidate) {
+      setScanMessage('No matching recruit was found for this QR token. Verify the pass or check roster availability.');
+      return;
+    }
+
+    if (candidate.status !== 'CHECKED_IN') {
+      await handleToggleCheckIn(candidate);
+      setScanMessage(`${candidate.fullName} checked in successfully using QR pass.`);
+    } else {
+      setScanMessage(`${candidate.fullName} is already checked in.`);
+    }
+
+    setScanToken(token);
+  };
+
+  const startCameraScan = async () => {
+    if (!('BarcodeDetector' in window)) {
+      setScanMessage('This browser does not support live QR camera scanning. Use the manual pass entry field instead.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setIsScanningCamera(true);
+      setScanMessage('Camera live. Hold the QR code steady in front of the scanner.');
+
+      const detector = new BarcodeDetector({ formats: ['qr_code'] as any });
+      const scanLoop = async () => {
+        if (!isScanningCamera || !videoRef.current) return;
+        try {
+          const barcodes = await detector.detect(videoRef.current);
+          if (barcodes.length > 0 && barcodes[0]?.rawValue) {
+            const rawValue = barcodes[0].rawValue;
+            await processScanToken(rawValue);
+            stopCamera();
+            return;
+          }
+        } catch (e) {
+          // Ignore transient scan errors and continue the loop.
+        }
+
+        if (isScanningCamera) {
+          requestAnimationFrame(scanLoop);
+        }
+      };
+
+      requestAnimationFrame(scanLoop);
+    } catch (error) {
+      setIsScanningCamera(false);
+      setScanMessage('Unable to access camera. Please use the manual token entry field instead.');
+    }
+  };
+
+  const handleQrImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!('BarcodeDetector' in window)) {
+      setScanMessage('This browser does not support QR image scanning. Paste the QR payload instead.');
+      return;
+    }
+
+    try {
+      const imageUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const detector = new BarcodeDetector({ formats: ['qr_code'] as any });
+          const detected = await detector.detect(img);
+          if (detected.length > 0 && detected[0]?.rawValue) {
+            await processScanToken(detected[0].rawValue);
+          } else {
+            setScanMessage('No QR code was detected in the selected image.');
+          }
+          URL.revokeObjectURL(imageUrl);
+        } catch (error) {
+          setScanMessage('The uploaded image could not be decoded. Please try a clearer QR scan.');
+        }
+      };
+      img.src = imageUrl;
+    } catch (error) {
+      setScanMessage('Unable to process the uploaded QR image.');
     }
   };
 
@@ -631,6 +776,63 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             {/* TAB: PARTICIPANT ROSTER (WITH PRIVACY SAFELISTS) */}
             {activeTab === 'roster' && (
               <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-hidden">
+                <div className="mb-4 p-4 rounded-2xl border border-cyan-500/30 bg-[#0b1228]">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2 text-cyan-300">
+                      <QrCode className="w-4 h-4" />
+                      <span className="text-xs font-mono-tech uppercase font-bold">QR CHECK-IN PORTAL</span>
+                    </div>
+                    <button
+                      onClick={isScanningCamera ? stopCamera : startCameraScan}
+                      className="rounded-lg border border-cyan-500/40 bg-cyan-900/40 px-3 py-1.5 text-[11px] font-mono-tech text-cyan-200 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>{isScanningCamera ? 'Stop Camera' : 'Scan with Camera'}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_180px] gap-3">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={scanToken}
+                        onChange={e => setScanToken(e.target.value)}
+                        placeholder="Paste QR token, confirmation code, or student ID"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => processScanToken(scanToken)}
+                        className="flex-1 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono-tech cursor-pointer"
+                      >
+                        VERIFY CHECK-IN
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <label className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[10px] font-mono-tech uppercase text-slate-300 cursor-pointer">
+                      <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Upload QR image</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleQrImageUpload} />
+                    </label>
+
+                    {scanMessage && (
+                      <div className="text-[11px] text-slate-200 font-mono-tech">
+                        {scanMessage}
+                      </div>
+                    )}
+                  </div>
+
+                  {isScanningCamera && (
+                    <div className="mt-4 rounded-2xl border border-cyan-500/30 bg-slate-950 p-2">
+                      <video ref={videoRef} className="w-full max-h-64 rounded-xl object-cover bg-black" playsInline muted />
+                    </div>
+                  )}
+                </div>
+
                 {/* Search & Filter Bar */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
                   <div className="relative flex-1">
@@ -849,6 +1051,25 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         <option value="EMERGENCY">Emergency Alert</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono-tech uppercase text-slate-300 mb-1">
+                      Delivery Channel
+                    </label>
+                    <select
+                      value={newAnnChannel}
+                      onChange={e => setNewAnnChannel(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-xs font-mono-tech"
+                    >
+                      <option value="WhatsApp">WhatsApp (Primary)</option>
+                      <option value="Campus Wide">Campus Wide</option>
+                      <option value="Technology">Technology</option>
+                      <option value="Cosplay">Cosplay</option>
+                    </select>
+                    <p className="mt-1 text-[11px] text-slate-400 font-mono-tech">
+                      Primary intimation is sent via WhatsApp to the registered phone number for each recruit.
+                    </p>
                   </div>
 
                   <div>

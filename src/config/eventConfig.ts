@@ -73,7 +73,7 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   registrationDeadlineDisplay: "October 22, 2026 • 23:59 IST",
   registrationDeadlineISO: "2026-10-22T23:59:00Z",
   contactEmail: "assembly.command@nova-tech.edu",
-  contactPhone: "+1 (555) 019-3000",
+  contactPhone: "+91 98765 43210",
   registrationFee: "FREE / RECRUIT ENTRY COMPLIMENTARY",
   websiteLanguage: "English (US/UK)",
   organizerPasscode: "DOOMSDAY2026",

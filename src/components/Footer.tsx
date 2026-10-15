@@ -83,8 +83,19 @@ export const Footer: React.FC<FooterProps> = ({ config, onRegisterClick }) => {
             </h4>
             <p className="text-xs text-slate-400 mb-1">{config.venueDisplay}</p>
             <p className="text-xs text-slate-500 mb-3">{config.venueAddress}</p>
+            <p className="text-xs text-slate-400 mb-2">
+              Primary Dispatch: <br />
+              <a
+                href={`https://wa.me/${config.contactPhone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-cyan-400 hover:underline"
+              >
+                WhatsApp {config.contactPhone}
+              </a>
+            </p>
             <p className="text-xs text-slate-400">
-              Direct Inquiries: <br />
+              Direct Email: <br />
               <a href={`mailto:${config.contactEmail}`} className="text-cyan-400 hover:underline">
                 {config.contactEmail}
               </a>

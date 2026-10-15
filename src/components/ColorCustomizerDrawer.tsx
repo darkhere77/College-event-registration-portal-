@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   ThemeColors,
+  ThemeSettings,
   DEFAULT_THEME,
   PRESET_THEMES,
   applyTheme,
+  normalizeThemeSettings,
   saveTheme,
   resetTheme,
 } from '../utils/themeManager';
@@ -36,7 +38,7 @@ export const ColorCustomizerDrawer: React.FC<ColorCustomizerDrawerProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [currentColors, setCurrentColors] = useState<ThemeColors>(DEFAULT_THEME);
+  const [currentColors, setCurrentColors] = useState<ThemeSettings>(normalizeThemeSettings(DEFAULT_THEME));
   const [activePresetId, setActivePresetId] = useState<string>('quantum-midnight');
   const [savedNotice, setSavedNotice] = useState<boolean>(false);
 
@@ -46,26 +48,34 @@ export const ColorCustomizerDrawer: React.FC<ColorCustomizerDrawerProps> = ({
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setCurrentColors(parsed);
-        applyTheme(parsed);
+        const normalized = normalizeThemeSettings(parsed);
+        setCurrentColors(normalized);
+        applyTheme(normalized);
       } catch (e) {}
     } else {
-      applyTheme(DEFAULT_THEME);
+      applyTheme(normalizeThemeSettings(DEFAULT_THEME));
     }
   }, []);
 
   const handleColorChange = (key: keyof ThemeColors, hexVal: string) => {
-    const updated = { ...currentColors, [key]: hexVal };
+    const updated = normalizeThemeSettings({ ...currentColors, [key]: hexVal });
     setCurrentColors(updated);
     applyTheme(updated);
     setActivePresetId('custom');
   };
 
+  const handleFontScaleChange = (value: number) => {
+    const updated = normalizeThemeSettings({ ...currentColors, fontScale: value });
+    setCurrentColors(updated);
+    applyTheme(updated);
+  };
+
   const handleSelectPreset = (preset: typeof PRESET_THEMES[0]) => {
+    const presetTheme = normalizeThemeSettings(preset.colors);
     setActivePresetId(preset.id);
-    setCurrentColors(preset.colors);
-    applyTheme(preset.colors);
-    saveTheme(preset.colors);
+    setCurrentColors(presetTheme);
+    applyTheme(presetTheme);
+    saveTheme(presetTheme);
   };
 
   const handleSave = () => {
@@ -267,6 +277,30 @@ export const ColorCustomizerDrawer: React.FC<ColorCustomizerDrawerProps> = ({
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
               <span>Granular Element Controls</span>
             </h3>
+
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-850">
+              <div className="flex items-center justify-between mb-2 gap-3">
+                <div>
+                  <span className="block font-semibold text-slate-200 text-xs">Global Text Size</span>
+                  <span className="text-[10px] font-mono-tech text-slate-400 uppercase">
+                    {currentColors.fontScale.toFixed(2)}x base scale
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono-tech">
+                  {currentColors.fontScale.toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.85"
+                max="1.4"
+                step="0.05"
+                value={currentColors.fontScale}
+                onChange={e => handleFontScaleChange(Number(e.target.value))}
+                className="w-full accent-cyan-500 cursor-pointer"
+                aria-label="Global text size"
+              />
+            </div>
 
             {[
               { label: 'Page Background', key: 'background' as const },

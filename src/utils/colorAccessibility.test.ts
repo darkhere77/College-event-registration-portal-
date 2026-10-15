@@ -8,6 +8,7 @@ import {
   evaluateWCAG,
   suggestAccessibleColor,
 } from './colorAccessibility.ts';
+import { DEFAULT_THEME, normalizeThemeSettings } from './themeManager.ts';
 
 test('isValidHexColor validates hex format accurately', () => {
   assert.equal(isValidHexColor('#fff'), true);
@@ -46,4 +47,15 @@ test('evaluateWCAG detects compliant and failing pairs', () => {
 test('suggestAccessibleColor suggests light tint for dark background', () => {
   const suggestion = suggestAccessibleColor('#111827', '#050710');
   assert.equal(suggestion, '#f8fafc');
+});
+
+test('normalizeThemeSettings keeps custom text colors and clamps font scale globally', () => {
+  const normalized = normalizeThemeSettings({
+    ...DEFAULT_THEME,
+    text: '#e2e8f0',
+    fontScale: 1.8,
+  });
+
+  assert.equal(normalized.text, '#e2e8f0');
+  assert.equal(normalized.fontScale, 1.4);
 });

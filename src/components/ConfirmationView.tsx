@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { ConfirmedRegistration } from './RegistrationForm';
 import { EventConfig } from '../config/eventConfig';
@@ -36,6 +37,7 @@ export const ConfirmationView: React.FC<ConfirmationViewProps> = ({
 }) => {
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedShare, setCopiedShare] = useState<boolean>(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
 
   useEffect(() => {
     // Confetti celebratory burst on mount
@@ -72,6 +74,33 @@ export const ConfirmationView: React.FC<ConfirmationViewProps> = ({
       setTimeout(() => setCopiedShare(false), 2000);
     }
   };
+
+  useEffect(() => {
+    if (!registration.qrCodeData) {
+      setQrCodeUrl('');
+      return;
+    }
+
+    let isMounted = true;
+    QRCode.toDataURL(registration.qrCodeData, {
+      width: 220,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#f8fafc',
+      },
+    })
+      .then(url => {
+        if (isMounted) setQrCodeUrl(url);
+      })
+      .catch(() => {
+        if (isMounted) setQrCodeUrl('');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [registration.qrCodeData]);
 
   const googleCalUrl = createGoogleCalendarUrl(
     `${config.eventName} — ${registration.eventName}`,
@@ -228,16 +257,30 @@ export const ConfirmationView: React.FC<ConfirmationViewProps> = ({
             </div>
           </div>
 
-          {/* Mock Barcode for authentic ticket badge */}
-          <div className="pt-4 border-t border-dashed border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="font-mono-tech text-[10px] text-slate-500 tracking-widest text-center sm:text-left">
-              ||| | ||||| || |||||| | |||| ||| ||||||| ||| |||| || |||
-              <br />
-              SECURE_RECRUIT_HASH_{registration.confirmationCode.replace(/-/g, '_')}
+          <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-5 pt-5 border-t border-dashed border-slate-800">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-700 bg-slate-950/80 p-4">
+              <div className="rounded-xl border border-slate-700 bg-white p-2 shadow-inner shadow-slate-300/10">
+                {qrCodeUrl ? (
+                  <img src={qrCodeUrl} alt="Unique event check-in QR code" className="h-32 w-32 object-contain" />
+                ) : (
+                  <div className="flex h-32 w-32 items-center justify-center text-[10px] font-mono-tech text-slate-500">
+                    GENERATING
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-[10px] font-mono-tech uppercase tracking-[0.2em] text-cyan-400">
+                Entry QR Pass
+              </p>
             </div>
-            <div className="text-[11px] font-mono-tech text-emerald-400 flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>STATUS: CONFIRMED ENROLLED</span>
+
+            <div className="flex flex-col justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/80 p-4">
+              <div className="text-[10px] font-mono-tech uppercase tracking-[0.2em] text-slate-400">Organizer scan token</div>
+              <div className="text-sm font-mono-tech font-bold text-amber-300 break-all">
+                {registration.memberPassId || registration.confirmationCode}
+              </div>
+              <div className="text-xs text-slate-300">
+                This QR is unique for this participant and can be scanned by organizers to verify identity and complete the check-in flow.
+              </div>
             </div>
           </div>
         </div>
@@ -279,6 +322,7 @@ export const ConfirmationView: React.FC<ConfirmationViewProps> = ({
           </p>
           <ul className="space-y-1.5 list-disc list-inside text-slate-300">
             <li>Screenshot or bookmark this recruit pass with your code: <strong>{registration.confirmationCode}</strong>.</li>
+            <li>Primary event updates and briefing notices will be sent via WhatsApp to: <strong>{registration.phone || config.contactPhone}</strong>.</li>
             <li>Arrive 20 minutes prior to mission start at {config.venueDisplay}.</li>
             <li>Direct any mission logistical questions to: <strong>{config.contactEmail}</strong>.</li>
           </ul>

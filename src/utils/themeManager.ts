@@ -1,6 +1,6 @@
 /**
  * Real-time Theme & Color Customization Manager using CSS variables.
- * Enables live UI customization across background, surfaces, buttons, text, and borders.
+ * Enables live UI customization across background, surfaces, buttons, text, borders, and page typography.
  */
 
 export interface ThemeColors {
@@ -12,6 +12,10 @@ export interface ThemeColors {
   primaryText: string;
   accent: string;
   border: string;
+}
+
+export interface ThemeSettings extends ThemeColors {
+  fontScale: number;
 }
 
 export interface ThemePreset {
@@ -32,6 +36,23 @@ export const DEFAULT_THEME: ThemeColors = {
   accent: '#38bdf8', // Sky 400
   border: '#1e293b', // Slate 800
 };
+
+export const DEFAULT_FONT_SCALE = 1;
+const MIN_FONT_SCALE = 0.85;
+const MAX_FONT_SCALE = 1.4;
+
+export function normalizeThemeSettings(input: Partial<ThemeSettings> | ThemeColors): ThemeSettings {
+  const colors = { ...DEFAULT_THEME, ...(input || {}) } as ThemeColors;
+  const rawScale = Number((input as Partial<ThemeSettings>)?.fontScale ?? DEFAULT_FONT_SCALE);
+  const safeScale = Number.isFinite(rawScale)
+    ? Math.min(MAX_FONT_SCALE, Math.max(MIN_FONT_SCALE, rawScale))
+    : DEFAULT_FONT_SCALE;
+
+  return {
+    ...colors,
+    fontScale: safeScale,
+  };
+}
 
 export const PRESET_THEMES: ThemePreset[] = [
   {
@@ -128,28 +149,31 @@ const STORAGE_KEY = 'campus_assembly_theme_colors';
 /**
  * Applies dynamic CSS variables directly onto document.documentElement in real time.
  */
-export function applyTheme(colors: ThemeColors) {
+export function applyTheme(colors: ThemeColors | ThemeSettings) {
   if (typeof document === 'undefined') return;
+  const normalized = normalizeThemeSettings(colors as Partial<ThemeSettings>);
   const root = document.documentElement;
 
-  root.style.setProperty('--portal-bg', colors.background);
-  root.style.setProperty('--portal-surface', colors.surface);
-  root.style.setProperty('--portal-text', colors.text);
-  root.style.setProperty('--portal-text-muted', colors.textMuted);
-  root.style.setProperty('--portal-primary', colors.primary);
-  root.style.setProperty('--portal-primary-text', colors.primaryText);
-  root.style.setProperty('--portal-accent', colors.accent);
-  root.style.setProperty('--portal-border', colors.border);
+  root.style.setProperty('--portal-bg', normalized.background);
+  root.style.setProperty('--portal-surface', normalized.surface);
+  root.style.setProperty('--portal-text', normalized.text);
+  root.style.setProperty('--portal-text-muted', normalized.textMuted);
+  root.style.setProperty('--portal-primary', normalized.primary);
+  root.style.setProperty('--portal-primary-text', normalized.primaryText);
+  root.style.setProperty('--portal-accent', normalized.accent);
+  root.style.setProperty('--portal-border', normalized.border);
+  root.style.setProperty('--portal-font-scale', normalized.fontScale.toString());
+  root.style.fontSize = `${16 * normalized.fontScale}px`;
 
   // Sync body background and text
-  document.body.style.backgroundColor = colors.background;
-  document.body.style.color = colors.text;
+  document.body.style.backgroundColor = normalized.background;
+  document.body.style.color = normalized.text;
 }
 
 /**
  * Loads the saved palette and applies it immediately during app startup.
  */
-export function initializeTheme(): ThemeColors {
+export function initializeTheme(): ThemeSettings {
   const theme = loadSavedTheme();
   applyTheme(theme);
   return theme;
@@ -158,33 +182,34 @@ export function initializeTheme(): ThemeColors {
 /**
  * Saves customized theme to localStorage.
  */
-export function saveTheme(colors: ThemeColors) {
+export function saveTheme(colors: ThemeColors | ThemeSettings) {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(colors));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeThemeSettings(colors as Partial<ThemeSettings>)));
 }
 
 /**
  * Loads saved theme preferences or falls back to default.
  */
-export function loadSavedTheme(): ThemeColors {
-  if (typeof localStorage === 'undefined') return DEFAULT_THEME;
+export function loadSavedTheme(): ThemeSettings {
+  if (typeof localStorage === 'undefined') return normalizeThemeSettings(DEFAULT_THEME);
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return DEFAULT_THEME;
+  if (!raw) return normalizeThemeSettings(DEFAULT_THEME);
   try {
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_THEME, ...parsed };
+    return normalizeThemeSettings(parsed);
   } catch (e) {
-    return DEFAULT_THEME;
+    return normalizeThemeSettings(DEFAULT_THEME);
   }
 }
 
 /**
  * Resets all theme variables to default sci-fi dark palette.
  */
-export function resetTheme(): ThemeColors {
+export function resetTheme(): ThemeSettings {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(STORAGE_KEY);
   }
-  applyTheme(DEFAULT_THEME);
-  return DEFAULT_THEME;
+  const defaultTheme = normalizeThemeSettings(DEFAULT_THEME);
+  applyTheme(defaultTheme);
+  return defaultTheme;
 }

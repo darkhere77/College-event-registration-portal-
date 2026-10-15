@@ -82,18 +82,20 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ config }) => {
 
         <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
           <a
+            href={`https://wa.me/${config.contactPhone.replace(/\D/g, '')}`}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/40 text-slate-200 text-xs font-mono-tech flex items-center justify-center gap-2 transition-colors"
+          >
+            <Phone className="w-4 h-4 text-emerald-400" />
+            <span>WhatsApp Alerts: {config.contactPhone}</span>
+          </a>
+          <a
             href={`mailto:${config.contactEmail}`}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-mono-tech flex items-center justify-center gap-2 transition-colors"
           >
             <Mail className="w-4 h-4 text-cyan-400" />
             <span>{config.contactEmail}</span>
-          </a>
-          <a
-            href={`tel:${config.contactPhone}`}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-mono-tech flex items-center justify-center gap-2 transition-colors"
-          >
-            <Phone className="w-4 h-4 text-amber-400" />
-            <span>{config.contactPhone}</span>
           </a>
         </div>
       </div>

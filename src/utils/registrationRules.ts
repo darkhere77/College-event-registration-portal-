@@ -105,6 +105,42 @@ export function generateDispatchCode(role: string): string {
   return `ASSEMBLY-${timestampHex}-${randomHex}-${roleCode}`;
 }
 
+export interface CheckInPassInput {
+  fullName: string;
+  studentId: string;
+  confirmationCode: string;
+  eventId: string;
+  eventName: string;
+  squadRole: string;
+  memberPassId?: string;
+}
+
+export function generateUniquePassId(): string {
+  const cryptoApi = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+  const source = cryptoApi && typeof cryptoApi.randomUUID === 'function'
+    ? cryptoApi.randomUUID()
+    : `pass-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  return source.replace(/-/g, '').slice(0, 18).toUpperCase();
+}
+
+export function createCheckInPassPayload(data: CheckInPassInput): string {
+  const memberPassId = data.memberPassId || generateUniquePassId();
+
+  return JSON.stringify({
+    type: 'campus_assembly_checkin',
+    version: 1,
+    memberPassId,
+    fullName: data.fullName,
+    studentId: data.studentId,
+    confirmationCode: data.confirmationCode,
+    eventId: data.eventId,
+    eventName: data.eventName,
+    squadRole: data.squadRole,
+    generatedAt: new Date().toISOString(),
+  });
+}
+
 /**
  * Calculates countdown remaining days, hours, minutes, seconds.
  */

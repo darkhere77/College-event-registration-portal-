@@ -3,6 +3,8 @@ import { EventMission, SquadRoleConfig } from '../config/eventConfig';
 import {
   validateRegistration,
   generateDispatchCode,
+  generateUniquePassId,
+  createCheckInPassPayload,
   VALID_YEARS,
 } from '../utils/registrationRules';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -42,6 +44,8 @@ export interface ConfirmedRegistration {
   teammates?: string;
   dietaryOrAccess?: string;
   confirmationCode: string;
+  memberPassId?: string;
+  qrCodeData?: string;
   status: 'CONFIRMED' | 'WAITLISTED' | 'CHECKED_IN';
   createdAt: string;
 }
@@ -251,6 +255,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     setSubmissionError(null);
 
     const dispatchCode = generateDispatchCode(selectedRole);
+    const memberPassId = generateUniquePassId();
     const nowIso = new Date().toISOString();
 
     const registrationRecord: ConfirmedRegistration = {
@@ -267,6 +272,16 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       teammates: formData.teammates.trim() || undefined,
       dietaryOrAccess: formData.dietaryOrAccess.trim() || undefined,
       confirmationCode: dispatchCode,
+      memberPassId,
+      qrCodeData: createCheckInPassPayload({
+        fullName: formData.fullName.trim(),
+        studentId: formData.studentId.trim().toUpperCase(),
+        confirmationCode: dispatchCode,
+        eventId: activeMission.id,
+        eventName: activeMission.name,
+        squadRole: selectedRole,
+        memberPassId,
+      }),
       status: 'CONFIRMED',
       createdAt: nowIso,
     };
@@ -609,16 +624,19 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
               <div>
                 <label htmlFor="reg-phone" className="block text-xs font-mono-tech uppercase text-slate-300 mb-2">
-                  Contact Phone (Optional - For Emergency Mission Broadcasts)
+                  WhatsApp Contact Number (Primary Alert Channel)
                 </label>
                 <input
                   id="reg-phone"
                   type="tel"
                   value={formData.phone}
                   onChange={e => handleInputChange('phone', e.target.value)}
-                  placeholder="+1 (555) 012-3456"
+                  placeholder="+91 98765 43210"
                   className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
                 />
+                <p className="mt-1.5 text-[11px] text-slate-400 font-mono-tech">
+                  Event updates, last-minute briefing alerts, and mission notices will primarily be sent to this WhatsApp number.
+                </p>
               </div>
             </div>
           )}

@@ -5,6 +5,12 @@
     --font-orbitron: 'Orbitron', monospace, sans-serif;
     --font-space: 'Space Grotesk', sans-serif;
     --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --portal-font-scale: 1;
+    font-size: calc(16px * var(--portal-font-scale));
+  }
+
+  html {
+    font-size: calc(16px * var(--portal-font-scale, 1));
   }
 
   body, #root {
@@ -12,6 +18,7 @@
     background-color: var(--portal-bg, #050710);
     color: var(--portal-text, #e2e8f0);
     overflow-x: hidden;
+    font-size: 1rem;
   }
 }
 

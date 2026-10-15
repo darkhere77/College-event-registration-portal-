@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   validateRegistration,
   generateDispatchCode,
+  generateUniquePassId,
+  createCheckInPassPayload,
   calculateTimeRemaining,
   createGoogleCalendarUrl,
 } from './registrationRules.ts';
@@ -36,7 +38,7 @@ test('validateRegistration accepts complete valid recruit data', () => {
   const result = validateRegistration({
     fullName: 'Tony Stark',
     collegeEmail: 'tstark@mit.campus.edu',
-    phone: '+1 555 019 4488',
+    phone: '+91 98765 43210',
     studentId: 'ST-0001',
     department: 'Robotics & AI',
     yearOfStudy: '4th Year',
@@ -56,6 +58,37 @@ test('generateDispatchCode produces formatted code with role suffix', () => {
   const code = generateDispatchCode('Strategist');
   assert.ok(code.startsWith('ASSEMBLY-'));
   assert.ok(code.endsWith('-STR'));
+});
+
+test('generateUniquePassId and createCheckInPassPayload create unique per-member QR metadata', () => {
+  const passIdA = generateUniquePassId();
+  const passIdB = generateUniquePassId();
+  const qrA = createCheckInPassPayload({
+    fullName: 'Tony Stark',
+    studentId: 'ST-0001',
+    confirmationCode: 'ASSEMBLY-1234-ABCD-ENG',
+    eventId: 'TECH_ANOMALY_HACK',
+    eventName: 'Quantum Anomaly Hackathon',
+    squadRole: 'Engineer',
+    memberPassId: passIdA,
+  });
+  const qrB = createCheckInPassPayload({
+    fullName: 'Peter Parker',
+    studentId: 'ST-0002',
+    confirmationCode: 'ASSEMBLY-5678-EFGH-ENG',
+    eventId: 'TECH_ANOMALY_HACK',
+    eventName: 'Quantum Anomaly Hackathon',
+    squadRole: 'Engineer',
+    memberPassId: passIdB,
+  });
+
+  assert.notEqual(passIdA, passIdB);
+  assert.notEqual(qrA, qrB);
+
+  const parsedA = JSON.parse(qrA);
+  assert.equal(parsedA.type, 'campus_assembly_checkin');
+  assert.equal(parsedA.memberPassId, passIdA);
+  assert.ok(parsedA.confirmationCode.startsWith('ASSEMBLY-'));
 });
 
 test('calculateTimeRemaining returns countdown components for future date', () => {
