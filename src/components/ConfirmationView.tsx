@@ -217,6 +217,22 @@ export const ConfirmationView: React.FC<ConfirmationViewProps> = ({
           })()}
 
           {/* Details Grid */}
+          {registration.whatsappOptIn && (
+            <div className={`mb-5 rounded-xl border p-3 text-xs ${
+              registration.whatsappDeliveryStatus === 'SENT'
+                ? 'border-emerald-500/30 bg-emerald-950/30 text-emerald-200'
+                : registration.whatsappDeliveryStatus === 'FAILED'
+                  ? 'border-amber-500/30 bg-amber-950/30 text-amber-200'
+                  : 'border-slate-700 bg-slate-900 text-slate-300'
+            }`}>
+              {registration.whatsappDeliveryStatus === 'SENT'
+                ? `WhatsApp confirmation was accepted for delivery to ${registration.phone}.`
+                : registration.whatsappDeliveryStatus === 'FAILED'
+                  ? `Your registration is confirmed, but the WhatsApp message could not be sent. ${registration.whatsappDeliveryError || 'Please contact the event organizers.'}`
+                  : 'WhatsApp confirmation status is pending.'}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mb-6">
             <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-850">
               <span className="text-slate-400 block mb-1">ASSIGNED MISSION</span>

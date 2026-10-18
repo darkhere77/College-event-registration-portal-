@@ -40,6 +40,7 @@ service cloud.firestore {
         'fullName', 'collegeEmail', 'phone', 'studentId', 'department', 
         'yearOfStudy', 'eventId', 'eventName', 'squadRole', 'teamName', 
         'teammates', 'dietaryOrAccess', 'confirmationCode', 'status', 
+        'whatsappOptIn', 'whatsappDeliveryStatus', 'whatsappDeliveryError',
         'userId', 'createdAt', 'updatedAt'
       ]) &&
       data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
@@ -56,6 +57,9 @@ service cloud.firestore {
       (!('teamName' in data) || (data.teamName is string && data.teamName.size() <= 100)) &&
       (!('teammates' in data) || (data.teammates is string && data.teammates.size() <= 500)) &&
       (!('dietaryOrAccess' in data) || (data.dietaryOrAccess is string && data.dietaryOrAccess.size() <= 300)) &&
+      (!('whatsappOptIn' in data) || data.whatsappOptIn is bool) &&
+      (!('whatsappDeliveryStatus' in data) || data.whatsappDeliveryStatus in ['NOT_REQUESTED', 'PENDING', 'SENT', 'FAILED']) &&
+      (!('whatsappDeliveryError' in data) || (data.whatsappDeliveryError is string && data.whatsappDeliveryError.size() <= 500)) &&
       (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
     }
 
@@ -85,7 +89,10 @@ service cloud.firestore {
       allow update: if isValidId(registrationId) && isValidRegistration(incoming()) && (
         isAdmin() ||
         (isSignedIn() && resource.data.userId == request.auth.uid && 
-         incoming().diff(existing()).affectedKeys().hasOnly(['dietaryOrAccess', 'teamName', 'teammates', 'updatedAt']))
+         incoming().diff(existing()).affectedKeys().hasOnly([
+           'dietaryOrAccess', 'teamName', 'teammates',
+           'whatsappDeliveryStatus', 'whatsappDeliveryError', 'updatedAt'
+         ]))
       );
 
       allow delete: if isValidId(registrationId) && isAdmin();

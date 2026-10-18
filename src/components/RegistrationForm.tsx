@@ -8,7 +8,7 @@ import {
   VALID_YEARS,
 } from '../utils/registrationRules';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
 import {
   ShieldCheck,
   User,
@@ -43,6 +43,9 @@ export interface ConfirmedRegistration {
   teamName?: string;
   teammates?: string;
   dietaryOrAccess?: string;
+  whatsappOptIn?: boolean;
+  whatsappDeliveryStatus?: 'NOT_REQUESTED' | 'PENDING' | 'SENT' | 'FAILED';
+  whatsappDeliveryError?: string;
   confirmationCode: string;
   memberPassId?: string;
   qrCodeData?: string;
@@ -87,6 +90,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     teammates: '',
     dietaryOrAccess: '',
     rulesAgreed: false,
+    whatsappOptIn: false,
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -208,6 +212,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       if (!formData.rulesAgreed) {
         stepErrors.rulesAgreed = 'You must agree to campus assembly guidelines and safety protocols.';
       }
+      const normalizedPhone = formData.phone.trim().replace(/[\s()-]/g, '');
+      if (formData.whatsappOptIn && !/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+        stepErrors.phone = 'Enter a valid international-format phone number (for example, +919876543210) to receive WhatsApp messages.';
+      }
     }
 
     setValidationErrors(stepErrors);
@@ -261,7 +269,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     const registrationRecord: ConfirmedRegistration = {
       fullName: formData.fullName.trim(),
       collegeEmail: formData.collegeEmail.trim().toLowerCase(),
-      phone: formData.phone.trim() || undefined,
+      phone: formData.phone.trim().replace(/[\s()-]/g, '') || undefined,
       studentId: formData.studentId.trim().toUpperCase(),
       department: formData.department.trim(),
       yearOfStudy: formData.yearOfStudy,
@@ -271,6 +279,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       teamName: formData.teamName.trim() || undefined,
       teammates: formData.teammates.trim() || undefined,
       dietaryOrAccess: formData.dietaryOrAccess.trim() || undefined,
+      whatsappOptIn: formData.whatsappOptIn,
+      whatsappDeliveryStatus: formData.whatsappOptIn ? 'PENDING' : 'NOT_REQUESTED',
       confirmationCode: dispatchCode,
       memberPassId,
       qrCodeData: createCheckInPassPayload({
@@ -288,6 +298,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
     try {
       // 1. Try Firestore direct persistence
+      let firestoreSaved = false;
+      let serverSaved = false;
       try {
         const docRef = await addDoc(collection(db, 'registrations'), {
           fullName: registrationRecord.fullName,
@@ -302,6 +314,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           teamName: registrationRecord.teamName || '',
           teammates: registrationRecord.teammates || '',
           dietaryOrAccess: registrationRecord.dietaryOrAccess || '',
+          whatsappOptIn: registrationRecord.whatsappOptIn || false,
+          whatsappDeliveryStatus: registrationRecord.whatsappDeliveryStatus,
           confirmationCode: registrationRecord.confirmationCode,
           status: registrationRecord.status,
           userId: auth.currentUser?.uid || 'guest-recruit',
@@ -309,21 +323,61 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           updatedAt: nowIso,
         });
         registrationRecord.id = docRef.id;
+        firestoreSaved = true;
       } catch (firestoreErr) {
         // Fall back to server API endpoint or local store
         console.warn('Direct Firestore write encountered issue, syncing to backend server:', firestoreErr);
-        try {
-          const res = await fetch('/api/registrations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(registrationRecord),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.id) registrationRecord.id = data.id;
+      }
+
+      let serverResponseData: {
+        id?: string;
+        whatsappDeliveryStatus?: ConfirmedRegistration['whatsappDeliveryStatus'];
+        whatsappDeliveryError?: string;
+      } | null = null;
+      try {
+        const res = await fetch('/api/registrations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...registrationRecord, rulesAgreed: formData.rulesAgreed }),
+        });
+        if (res.ok) {
+          const responseData = await res.json() as {
+            id?: string;
+            whatsappDeliveryStatus?: ConfirmedRegistration['whatsappDeliveryStatus'];
+            whatsappDeliveryError?: string;
+          };
+          serverResponseData = responseData;
+          if (!firestoreSaved && responseData.id) registrationRecord.id = responseData.id;
+          serverSaved = true;
+        } else {
+          const failure = await res.json().catch(() => null) as { error?: string } | null;
+          console.error(`Server participant sync failed (${res.status}): ${failure?.error || 'unknown error'}`);
+        }
+      } catch (serverErr) {
+        console.warn('Participant server sync is unavailable:', serverErr);
+      }
+
+      if (registrationRecord.whatsappOptIn) {
+        if (!serverSaved) {
+          registrationRecord.whatsappDeliveryStatus = 'FAILED';
+          registrationRecord.whatsappDeliveryError = 'Registration could not be synced to the messaging service. Please contact the event organizers.';
+        } else {
+          registrationRecord.whatsappDeliveryStatus =
+            serverResponseData?.whatsappDeliveryStatus || 'FAILED';
+          registrationRecord.whatsappDeliveryError =
+            serverResponseData?.whatsappDeliveryError;
+        }
+
+        if (firestoreSaved && registrationRecord.id) {
+          try {
+            await updateDoc(doc(db, 'registrations', registrationRecord.id), {
+              whatsappDeliveryStatus: registrationRecord.whatsappDeliveryStatus,
+              whatsappDeliveryError: registrationRecord.whatsappDeliveryError || '',
+              updatedAt: new Date().toISOString(),
+            });
+          } catch (statusErr) {
+            console.warn('WhatsApp delivery status could not be synced to Firestore:', statusErr);
           }
-        } catch (serverErr) {
-          console.warn('Local offline mode preserved for demo registration');
         }
       }
 
@@ -635,7 +689,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                   className="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
                 />
                 <p className="mt-1.5 text-[11px] text-slate-400 font-mono-tech">
-                  Event updates, last-minute briefing alerts, and mission notices will primarily be sent to this WhatsApp number.
+                  Add your number in international format (for example, +919876543210) if you want to receive WhatsApp updates.
                 </p>
               </div>
             </div>
@@ -873,6 +927,21 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 </label>
                 {validationErrors.rulesAgreed && (
                   <p className="text-xs text-rose-400 font-mono-tech">{validationErrors.rulesAgreed}</p>
+                )}
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={formData.whatsappOptIn}
+                    onChange={e => handleInputChange('whatsappOptIn', e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <span className="text-xs text-slate-300 leading-relaxed group-hover:text-slate-200">
+                    I agree to receive WhatsApp registration confirmations and event updates at the number I provided. I can opt out at any time.
+                  </span>
+                </label>
+                {validationErrors.phone && (
+                  <p className="text-xs text-rose-400 font-mono-tech">{validationErrors.phone}</p>
                 )}
 
                 <p className="text-[11px] text-slate-400 leading-relaxed">

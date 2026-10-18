@@ -93,6 +93,70 @@ async function readBody(req) {
   return req.body;
 }
 
+async function sendWhatsAppRegistrationConfirmation(registration) {
+  if (!registration.whatsappOptIn) return;
+
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const templateName = process.env.WHATSAPP_TEMPLATE_NAME;
+  const missingConfig = [
+    !accessToken && 'WHATSAPP_ACCESS_TOKEN',
+    !phoneNumberId && 'WHATSAPP_PHONE_NUMBER_ID',
+    !templateName && 'WHATSAPP_TEMPLATE_NAME',
+  ].filter(Boolean);
+  if (missingConfig.length) {
+    registration.whatsappDeliveryStatus = 'FAILED';
+    registration.whatsappDeliveryError = `WhatsApp is not configured on the server. Missing: ${missingConfig.join(', ')}.`;
+    return;
+  }
+
+  const apiVersion = process.env.WHATSAPP_GRAPH_API_VERSION || 'v22.0';
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${apiVersion}/${encodeURIComponent(phoneNumberId)}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: registration.phone.replace(/^\+/, ''),
+          type: 'template',
+          template: {
+            name: templateName,
+            language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en_US' },
+            components: [{
+              type: 'body',
+              parameters: [
+                { type: 'text', text: registration.fullName },
+                { type: 'text', text: registration.eventName },
+                { type: 'text', text: registration.confirmationCode },
+              ],
+            }],
+          },
+        }),
+      }
+    );
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      registration.whatsappDeliveryStatus = 'FAILED';
+      registration.whatsappDeliveryError =
+        result?.error?.message || `WhatsApp rejected the message (HTTP ${response.status}).`;
+      console.error('WhatsApp Cloud API rejected a registration confirmation.');
+      return;
+    }
+    registration.whatsappDeliveryStatus = 'SENT';
+    registration.whatsappDeliveryError = undefined;
+  } catch (error) {
+    registration.whatsappDeliveryStatus = 'FAILED';
+    registration.whatsappDeliveryError = 'Could not connect to WhatsApp. Please try again later.';
+    console.error('WhatsApp Cloud API request failed:', error);
+  }
+}
+
 export default async function handler(req, res) {
   const pathname = new URL(req.url, 'https://placeholder.local').pathname;
 
@@ -122,6 +186,9 @@ export default async function handler(req, res) {
     if (!validation.isValid) {
       return res.status(400).json({ error: 'Invalid registration payload', details: validation.errors });
     }
+    if (body.whatsappOptIn === true && (typeof body.phone !== 'string' || !/^\+[1-9]\d{7,14}$/.test(body.phone.trim()))) {
+      return res.status(400).json({ error: 'A valid international-format WhatsApp number is required when opting in.' });
+    }
 
     const existing = registrationsStore.find(
       (r) => r.collegeEmail.toLowerCase() === String(body.collegeEmail || '').toLowerCase() && r.eventId === body.eventId
@@ -146,12 +213,16 @@ export default async function handler(req, res) {
       teamName: body.teamName ? String(body.teamName).trim() : undefined,
       teammates: body.teammates ? String(body.teammates).trim() : undefined,
       dietaryOrAccess: body.dietaryOrAccess ? String(body.dietaryOrAccess).trim() : undefined,
+      memberPassId: typeof body.memberPassId === 'string' ? body.memberPassId : undefined,
+      whatsappOptIn: body.whatsappOptIn === true,
+      whatsappDeliveryStatus: body.whatsappOptIn === true ? 'PENDING' : 'NOT_REQUESTED',
       confirmationCode: dispatchCode,
       status: 'CONFIRMED',
       createdAt: new Date().toISOString(),
     };
 
     registrationsStore.unshift(newRec);
+    await sendWhatsAppRegistrationConfirmation(newRec);
     return res.status(201).json(newRec);
   }
 

@@ -69,6 +69,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'roster' | 'capacity' | 'broadcast' | 'config'>('overview');
   const [roster, setRoster] = useState<ConfirmedRegistration[]>([]);
   const [isLoadingRoster, setIsLoadingRoster] = useState<boolean>(false);
+  const [excelExportError, setExcelExportError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterRole, setFilterRole] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
@@ -136,28 +137,38 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   const loadRoster = async () => {
     setIsLoadingRoster(true);
-    let loaded: ConfirmedRegistration[] = [];
-
+    let local: ConfirmedRegistration[] = [];
     try {
-      const snap = await getDocs(collection(db, 'registrations'));
-      loaded = snap.docs.map(d => ({
-        id: d.id,
-        ...(d.data() as any),
-      }));
-    } catch (e) {
-      try {
-        const res = await fetch('/api/registrations');
-        if (res.ok) {
-          loaded = await res.json();
-        }
-      } catch (err) {
-        loaded = JSON.parse(localStorage.getItem('campus_assembly_roster') || '[]');
-      }
+      local = JSON.parse(localStorage.getItem('campus_assembly_roster') || '[]');
+    } catch (error) {
+      console.error('Saved local participant roster could not be read:', error);
     }
 
-    const local = JSON.parse(localStorage.getItem('campus_assembly_roster') || '[]');
+    const [firestoreResult, apiResult] = await Promise.allSettled([
+      getDocs(collection(db, 'registrations')).then(snap =>
+        snap.docs.map(d => ({
+          id: d.id,
+          ...(d.data() as any),
+        })) as ConfirmedRegistration[]
+      ),
+      fetch('/api/registrations', {
+        headers: { 'x-staff-passcode': passcode.trim() },
+      }).then(async res => {
+        if (!res.ok) throw new Error(`Server participant roster request failed with status ${res.status}`);
+        return await res.json() as ConfirmedRegistration[];
+      }),
+    ]);
+    const firestoreRegistrations = firestoreResult.status === 'fulfilled' ? firestoreResult.value : [];
+    const serverRegistrations = apiResult.status === 'fulfilled' ? apiResult.value : [];
+    if (firestoreResult.status === 'rejected') {
+      console.error('Participant records could not be loaded from Firestore:', firestoreResult.reason);
+    }
+    if (apiResult.status === 'rejected') {
+      console.error('Participant records could not be loaded from the server:', apiResult.reason);
+    }
+
     const mergedMap = new Map<string, ConfirmedRegistration>();
-    [...local, ...loaded].forEach(item => {
+    [...local, ...firestoreRegistrations, ...serverRegistrations].forEach(item => {
       const key = item.confirmationCode || item.studentId;
       if (key) mergedMap.set(key, item);
     });
@@ -441,6 +452,73 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     document.body.removeChild(link);
   };
 
+  const exportExcel = async () => {
+    try {
+      const { default: ExcelJS } = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Participants');
+      worksheet.columns = [
+        { header: 'Confirmation Code', key: 'confirmationCode', width: 28 },
+        { header: 'Full Name', key: 'fullName', width: 24 },
+        { header: maskSensitiveData ? 'College Email (Masked)' : 'College Email', key: 'collegeEmail', width: 30 },
+        { header: maskSensitiveData ? 'WhatsApp Number (Masked)' : 'WhatsApp Number', key: 'phone', width: 24 },
+        { header: maskSensitiveData ? 'Student ID (Masked)' : 'Student ID', key: 'studentId', width: 20 },
+        { header: 'Department', key: 'department', width: 26 },
+        { header: 'Year of Study', key: 'yearOfStudy', width: 18 },
+        { header: 'Event ID', key: 'eventId', width: 28 },
+        { header: 'Event Name', key: 'eventName', width: 36 },
+        { header: 'Squad Role', key: 'squadRole', width: 18 },
+        { header: 'Member Pass ID', key: 'memberPassId', width: 28 },
+        { header: 'Team Name', key: 'teamName', width: 24 },
+        { header: 'Teammates', key: 'teammates', width: 36 },
+        { header: maskSensitiveData ? 'Dietary / Accessibility (Masked)' : 'Dietary / Accessibility', key: 'dietaryOrAccess', width: 36 },
+        { header: 'WhatsApp Opt-in', key: 'whatsappOptIn', width: 18 },
+        { header: 'WhatsApp Delivery Status', key: 'whatsappDeliveryStatus', width: 24 },
+        { header: 'Registration Status', key: 'status', width: 20 },
+        { header: 'Registered At', key: 'createdAt', width: 28 },
+      ];
+      worksheet.addRows(roster.map(r => ({
+        confirmationCode: r.confirmationCode,
+        fullName: r.fullName,
+        collegeEmail: maskSensitiveData ? maskEmail(r.collegeEmail) : r.collegeEmail,
+        phone: maskSensitiveData ? (r.phone ? r.phone.replace(/.(?=.{4})/g, '*') : '') : r.phone || '',
+        studentId: maskSensitiveData ? 'REDACTED-PII' : r.studentId,
+        department: r.department,
+        yearOfStudy: r.yearOfStudy,
+        eventId: r.eventId,
+        eventName: r.eventName,
+        squadRole: r.squadRole,
+        memberPassId: r.memberPassId || '',
+        teamName: r.teamName || '',
+        teammates: r.teammates || '',
+        dietaryOrAccess: maskSensitiveData ? (r.dietaryOrAccess ? 'REDACTED-PII' : '') : r.dietaryOrAccess || '',
+        whatsappOptIn: r.whatsappOptIn ? 'Yes' : 'No',
+        whatsappDeliveryStatus: r.whatsappDeliveryStatus || 'NOT_REQUESTED',
+        status: r.status,
+        createdAt: r.createdAt,
+      })));
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer as BlobPart], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Campus_Assembly_Participants_${Date.now()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      setExcelExportError(null);
+    } catch (error) {
+      console.error('Participant Excel workbook could not be created:', error);
+      setExcelExportError('The Excel file could not be created. Please try again.');
+    }
+  };
+
   const exportJSON = () => {
     const sanitized = roster.map(r => ({
       confirmationCode: r.confirmationCode,
@@ -555,7 +633,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   type="password"
                   value={passcode}
                   onChange={e => setPasscode(e.target.value)}
-                  placeholder="Enter passcode (Default: DOOMSDAY2026)"
+                  placeholder="Enter security passcode"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-amber-400"
                 />
               </div>
@@ -669,6 +747,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     <span>CSV</span>
                   </button>
                   <button
+                    onClick={() => void exportExcel()}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-mono-tech flex items-center gap-1 cursor-pointer"
+                    title="Download all participant details as an Excel workbook"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Excel</span>
+                  </button>
+                  <button
                     onClick={exportJSON}
                     className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-mono-tech flex items-center gap-1 cursor-pointer"
                   >
@@ -776,6 +862,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             {/* TAB: PARTICIPANT ROSTER (WITH PRIVACY SAFELISTS) */}
             {activeTab === 'roster' && (
               <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-hidden">
+                {excelExportError && (
+                  <p role="alert" className="mb-3 rounded-lg border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-300">
+                    {excelExportError}
+                  </p>
+                )}
                 <div className="mb-4 p-4 rounded-2xl border border-cyan-500/30 bg-[#0b1228]">
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2 text-cyan-300">
